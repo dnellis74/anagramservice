@@ -1,3 +1,14 @@
+Instructions to run on Windows
+================
+1. Prerequisite - Need a JDK with JAVA_HOME env variable set, and of course, git.
+1. git clone https://github.com/dnellis74/anagramservice.git
+1. cd anagramservice
+1. gradlew bootRun
+1. Check out http://localhost:9000/anagrams/street.json in a browser
+
+More to come!   I fully intend to deliver the rest of the specification.  I just wanted to deliver something before 5pm today!
+
+
 Ibotta Dev Project
 =========
 
