@@ -6,6 +6,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -29,8 +31,13 @@ import dto.AnagramResult;
 import dto.Words;
 
 @Controller
+//TODO Refactor this class to just be a webservice controller and move anagram logic to a delegate class
 public class AnagramController {
 
+	//TODO Refactor the dictionary and the stats into one class.  Hide the details of the anagram implementation
+	//TODO persist the state of the dictionary back to the file
+	//TODO reload from the file
+	DictionaryInfo dictionaryInfo = new DictionaryInfo();
 	Map<String, Collection<String>> hashedDict = new HashMap<String, Collection<String>>();
 
 	{
@@ -39,10 +46,60 @@ public class AnagramController {
 		try {
 			InputStream inputStream = new GZIPInputStream(new FileInputStream(file));
 			try (Scanner scanner = new Scanner(inputStream)) {
+				int totalChars = 0;
+				int totalLines = 0;
+				Map<Integer, Integer> medianMap = new HashMap<Integer, Integer>();
 				while (scanner.hasNextLine()) {
 					String line = scanner.nextLine();
 					addWord(line);
+					
+					// Stats
+					// TODO Make these stats update as the dictionary is modified.
+					// Average
+					totalLines++;
+					totalChars += line.length();
+
+					// Minimum
+					if (line.length() < dictionaryInfo.getMinLength()) {
+						dictionaryInfo.setMinLength(line.length());
+					}
+					
+					// Max
+					if (line.length() > dictionaryInfo.getMaxLength()) {
+						dictionaryInfo.setMaxLength(line.length());
+					}
+					
+					// Median
+					// This "unique implementation for a median avoided a sort.   It'd be interesting to see if this is faster.
+					// My guess is the adds to the map are way slower
+					Integer count = medianMap.get(line.length());
+					if (count == null) {
+						medianMap.put(line.length(), 1);
+					} else {
+						medianMap.put(line.length(), count + 1);
+					}
 				}
+				// Calculate aggregate stats
+				// Final median
+				int i = 1;
+				int progress = 0;
+				while (true) {
+					Integer count = medianMap.get(i);
+					System.out.println(i + " " + count + " " + progress + " " + totalLines / 2);
+					if (count != null) {
+						progress += count;
+						if (progress > totalLines / 2 ) {
+							dictionaryInfo.setMedian(i);
+							break;
+						}
+					}				
+					i++;
+				}
+				// Final average
+				// This could likely be a float and not a BigDecimal
+				// Initially I was worried about integer overflow.
+				dictionaryInfo.setAverage(new BigDecimal(totalChars).divide(new BigDecimal(totalLines), 1, RoundingMode.HALF_UP));
+				// TODO prune words with no anagrams
 				scanner.close();
 			}
 			inputStream.close();
@@ -71,6 +128,12 @@ public class AnagramController {
 			result.setAnagrams(new HashSet<String>());
 		}
 		return result;
+	}
+
+	@RequestMapping(method = RequestMethod.GET, path = "words.json")
+	@ResponseStatus(code = HttpStatus.OK)
+	public @ResponseBody DictionaryInfo getWordInfo() {
+		return dictionaryInfo;
 	}
 
 	@RequestMapping(method = RequestMethod.POST, path = "words.json")
@@ -103,6 +166,14 @@ public class AnagramController {
 				hashedDict.remove(hash);
 			}
 		}
+	}
+
+	// Extra: delete a grouping
+	@RequestMapping(method = RequestMethod.DELETE, path = "group/{input}.json")
+	@ResponseStatus(code = HttpStatus.OK)
+	public void deleteGroup(@PathVariable(value = "input") String input) {
+		String hash = stringToHash(input);
+		hashedDict.remove(hash);
 	}
 
 	private void addWord(String word) {
