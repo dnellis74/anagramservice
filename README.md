@@ -5,9 +5,15 @@ Instructions to run on Windows
 1. cd anagramservice
 1. gradlew bootRun
 1. 
-1. Check out http://localhost:3000/anagrams/street.json in a browser
 
-The ruby tests pass, expect for 2, but that seems to be a "trick" of sorts.   The default port is set to 3000 in application.properties
+Test it at:
+http://localhost:3000/anagrams/spear.json?limit=4
+
+The ruby tests pass, expect for 2, but that seems to be a "trick" of sorts.   The default port is set to 3000 in application.properties.
+
+The optional goals of dictionary stats, as well as removing an entire anagram group have been completed.
+
+I sprinkled a few comments into the code, but the documentation could use more work. 
 
 
 Ibotta Dev Project
